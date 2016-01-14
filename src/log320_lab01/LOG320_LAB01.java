@@ -5,17 +5,11 @@
  */
 package log320_lab01;
 
-import java.io.BufferedReader;
-import java.io.FileInputStream;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Arrays;
-import java.util.Calendar;
-import java.util.Date;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
+
 
 /**
  *
@@ -24,83 +18,98 @@ import java.util.concurrent.TimeUnit;
 public class LOG320_LAB01 {
 
     private static int nbTotalAnagram = 0;
+    private static Timer timer = new Timer();
 
     /**
      * @param args the command line arguments
      */
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
         /* if (args.length != 2) {
             System.out.println("Erreur nombre d'argument");
             System.exit(0);
         }*/
+        timer.start();
 
-        long a = Calendar.getInstance().getTimeInMillis();
-        
-        //lecture du fichier de mots	
+        List<String> words = Files.readAllLines(Paths.get("C:\\Users\\Zeldorine\\Downloads\\anagramme\\words.txt"));
+        List<String> dics = Files.readAllLines(Paths.get("C:\\Users\\Zeldorine\\Downloads\\anagramme\\dict.txt"));
+
         try {
-            InputStream ips = new FileInputStream("C:\\Users\\Zeldorine\\Downloads\\anagramme\\words.txt");
-            InputStreamReader ipsr = new InputStreamReader(ips);
-            BufferedReader br = new BufferedReader(ipsr);
-            String ligne;
-            while ((ligne = br.readLine()) != null) {
+            for (String ligne : words) {
                 int nbAnagramme = 0;
                 //lecture du dictionnaire
-                InputStream ips2 = new FileInputStream("C:\\Users\\Zeldorine\\Downloads\\anagramme\\dict.txt");
-                InputStreamReader ipsr2 = new InputStreamReader(ips2);
-                BufferedReader br2 = new BufferedReader(ipsr2);
-                String ligne2;
-                while ((ligne2 = br2.readLine()) != null) {
-                    if (EstUnAnagramme(ligne.replace(" ", "").chars().mapToObj(c -> (char)c).toArray(Character[]::new), ligne2.replace(" ", "").chars().mapToObj(c -> (char)c).toArray(Character[]::new))) {
+                for (String ligne2 : dics) {
+                    if (EstUnAnagrammeV2(ligne.replace(" ", "").toCharArray(), ligne2.replace(" ", "").toCharArray())) {
                         nbTotalAnagram++;
                         nbAnagramme++;
                     }
                 }
-                br2.close();
                 System.out.println("Il y a " + nbAnagramme + " anagramme pour le mot " + ligne);
             }
-            br.close();
         } catch (Exception e) {
-            System.out.println(e.toString());
-        }
-        
-        System.out.println("Il y a un total de " + nbTotalAnagram);
-        float time = (Calendar.getInstance().getTimeInMillis() - a) / 1000.000000000f;
-        System.out.println("Temps execution : " + time + " secondes");
+            e.printStackTrace();
+        } 
+
+        System.out.println(
+                "Il y a un total de " + nbTotalAnagram);
+        timer.stop();
+        System.out.format("Temps execution : %.7f secondes", timer.getTime());
     }
 
-    private static boolean EstUnAnagramme(Character[] chaine1, Character[] chaine2) {
-        String chaine2cp = Arrays.toString(chaine2).trim();
-        String chaine1cp = Arrays.toString(chaine1);
+    private static boolean EstUnAnagrammeV1(char[] chaine1, char[] chaine2) {
         for (char c1 : chaine1) {
             boolean trouver = false;
-            for(int i=0; i<chaine2.length; i++) {
-                if (chaine2[i] != null && c1 == chaine2[i]) {
+            for (int i = 0; i < chaine2.length; i++) {
+                if (chaine2[i] != '\0' && c1 == chaine2[i]) {
                     trouver = true;
-                    chaine2[i]= null;
+                    chaine2[i] = '\0';
                     break;
                 }
             }
-            
-            if(trouver == false){
+
+            if (trouver == false) {
                 return false;
             }
         }
-        
-       if(!chaineIsEmpty(chaine2)){
+
+        if (!chaineIsEmpty(chaine2)) {
             return false;
         }
-        
 
         return true;
     }
 
-    private static boolean chaineIsEmpty(Character[] chaine) {
-       for(Character c : chaine){
-           if(c != null){
-               return false;
-           }
-       }
-       
-       return true;
+    public static boolean EstUnAnagrammeV2(char[] ch1, char[] ch2) {
+        if (ch1.length != ch2.length) {
+            return false;
+        }
+        Arrays.parallelSort(ch1);
+        Arrays.parallelSort(ch2);
+        return Arrays.equals(ch1, ch2);
+    }
+
+    private static boolean chaineIsEmpty(char[] chaine) {
+        for (char c : chaine) {
+            if (c != '\0') {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public static class Timer {
+
+        private static long startTime, endTime;
+
+        public static void start() {
+            startTime = System.currentTimeMillis();
+        }
+
+        public static void stop() {
+            endTime = System.currentTimeMillis();
+        }
+
+        public static float getTime() {
+            return (endTime - startTime) / 1000.000000000f;
+        }
     }
 }
