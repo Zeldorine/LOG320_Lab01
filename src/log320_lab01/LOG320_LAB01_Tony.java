@@ -8,7 +8,6 @@ package log320_lab01;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.List;
 
 /**
  *
@@ -16,7 +15,7 @@ import java.util.List;
  */
 public class LOG320_LAB01_Tony {
 
-    private static Timer timer = new Timer();
+    //  private static Timer timer = new Timer();
     private static String[] words;
     private static String[] dics;
     private static int[] resultat;
@@ -30,11 +29,11 @@ public class LOG320_LAB01_Tony {
             System.exit(0);
         }
 
-        words = Files.readAllLines(Paths.get(args[0]));
-        dics = Files.readAllLines(Paths.get(args[1]));*/
+        words = Files.readAllLines(Paths.get(args[0])).toArray(new String[0]);
+        dics = Files.readAllLines(Paths.get(args[1])).toArray(new String[0]);*/
 
-        words = Files.readAllLines(Paths.get("C:\\Users\\Zeldorine\\Downloads\\anagramme\\words.txt")).toArray(new String[0]);
-        dics = Files.readAllLines(Paths.get("C:\\Users\\Zeldorine\\Downloads\\anagramme\\dict.txt")).toArray(new String[0]);
+        words = removeSpace(Files.readAllLines(Paths.get("C:\\Users\\Zeldorine\\Downloads\\anagramme\\words.txt")).toArray(new String[0]));
+        dics = removeSpace(Files.readAllLines(Paths.get("C:\\Users\\Zeldorine\\Downloads\\anagramme\\dict.txt")).toArray(new String[0]));
 
         resultat = new int[words.length];
 
@@ -43,11 +42,20 @@ public class LOG320_LAB01_Tony {
         Runtime runtime = Runtime.getRuntime();
         runtime.freeMemory();
 
-        timer.start();
+        Timer.start();
         prog();
-        timer.stop();
+        Timer.stop();
 
         affichierResultat();
+    }
+
+    private static String[] removeSpace(String[] list) {
+        String[] newList = new String[list.length];
+        for (int i = 0; i < list.length; i++) {
+            newList[i] = list[i].replace(" ", "");
+        }
+
+        return newList;
     }
 
     /**
@@ -72,10 +80,9 @@ public class LOG320_LAB01_Tony {
 
     private static void prog() throws IOException {
         try {
-            int index = 0;
-            for (int i=0;i<words.length;i++) {// USE thread
+            for (int i = 0; i < words.length; i++) {// USE thread
                 int nbAnagramme = 0;
-                for (int j=0;j<words.length;j++) {
+                for (int j = 0; j < dics.length; j++) {
                     /* if (EstUnAnagrammeV1(supEspace(ligne.toCharArray()), supEspace(ligne2.toCharArray()))) {
                         nbTotalAnagram++;
                         nbAnagramme++;
@@ -107,7 +114,7 @@ public class LOG320_LAB01_Tony {
         sb.append(nbTotal);
         System.out.println(sb.toString());
 
-        System.out.format("Temps execution : %.20f secondes", timer.getTime());
+        System.out.format("Temps execution : %.20f secondes", Timer.getTime());
     }
 
     private static boolean EstUnAnagrammeV1(char[] chaine1, char[] chaine2) {
@@ -134,10 +141,9 @@ public class LOG320_LAB01_Tony {
     }
 
     private static boolean EstUnAnagrammeV2(char[] ch1, char[] ch2) {
-        /* int length = ch1.length; // plus rapide mais marche pas
-        if (length != ch2.length) {
+        if (ch1.length != ch2.length) {
             return false;
-        }*/
+        }
         return hash(ch1) == hash(ch2);
     }
 
@@ -145,9 +151,7 @@ public class LOG320_LAB01_Tony {
         int hash = 0;
 
         for (char c : tab) {
-            if (!Character.isWhitespace(c)) {
                 hash += c;
-            }
         }
 
         return hash;
@@ -212,7 +216,6 @@ public class LOG320_LAB01_Tony {
 
         public static float getTime() {
             return (endTime - startTime) / 1000000000.000000000f;
-            //return TimeUnit.MILLISECONDS.convert((endTime - startTime), TimeUnit.NANOSECONDS) / 1000.000000f;
         }
     }
 }
