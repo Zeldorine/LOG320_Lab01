@@ -9,6 +9,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.HashMap;
+import java.util.concurrent.ForkJoinPool;
+import static java.util.concurrent.ForkJoinTask.invokeAll;
 import java.util.concurrent.RecursiveAction;
 
 /**
@@ -19,20 +21,26 @@ public class LOG320_LAB01_Tony extends RecursiveAction {
 
     private static String[] words;
     private static String[] dics;
-    private static int debutWord;
-    private static int finWord;
-    private static int debutDic;
-    private static int finDic;
+    private int debutDic;
+    private int finDic;
     private static int[] resultat;
     private static HashMap<String, Integer> map;
 
-    public LOG320_LAB01_Tony(String[] words, String[] dics, int debutWord, int finWord, int debutDic, int finDic) {
-        LOG320_LAB01_Tony.words = words;
-        LOG320_LAB01_Tony.dics = dics;
-        LOG320_LAB01_Tony.debutWord = debutWord;
-        LOG320_LAB01_Tony.finWord = finWord;
-        LOG320_LAB01_Tony.debutDic = debutDic;
-        LOG320_LAB01_Tony.finDic = finDic;
+    /**
+     *
+     * @param words
+     * @param dics
+     * @param debutWord
+     * @param finWord
+     * @param debutDic
+     * @param finDic
+     */
+    public LOG320_LAB01_Tony(int debutDic, int finDic) {
+        super();
+        this.debutDic = debutDic;
+        this.finDic = finDic;
+
+        // this.compute();
     }
 
     /**
@@ -53,14 +61,21 @@ public class LOG320_LAB01_Tony extends RecursiveAction {
 
         preprog();
 
+        RecursiveAction mainTask = new LOG320_LAB01_Tony(0, dics.length);
+        ForkJoinPool mainPool = new ForkJoinPool(64);
+
         Runtime runtime = Runtime.getRuntime();
         runtime.freeMemory();
 
-        Timer.start();
-        //prog();
-        new LOG320_LAB01_Tony(words, dics, 0, words.length, 0, dics.length).compute();
-        Timer.stop();
-
+        if (dics.length < 40) {
+            Timer.start();
+            prog();
+            Timer.stop();
+        } else {
+            Timer.start();
+            mainPool.invoke(mainTask);
+            Timer.stop();
+        }
         affichierResultat();
     }
 
@@ -176,27 +191,18 @@ public class LOG320_LAB01_Tony extends RecursiveAction {
 
     @Override
     protected void compute() {
-        int maxWord = finWord - debutWord;
-        if (maxWord < 50) {
-            int maxDic = finDic - debutDic;
-            if (maxDic < 50000) {
-                for (int i = 0; i < maxWord; i++) {// USE thread
-                    for (int j = 0; j < maxDic; j++) {
-                        if (EstUnAnagrammeV2(words[i].toCharArray(), dics[j].toCharArray())) {
-                            resultat[i] += 1;
-                        }
+        if (finDic - debutDic < 40) {
+            for (int i = 0; i < words.length; i++) {
+                for (int j = debutDic; j < finDic; j++) {
+                    if (EstUnAnagrammeV2(words[i].toCharArray(), dics[j].toCharArray())) {
+                        resultat[i] += 1;
                     }
                 }
-            } else {
-                // diviser le tableau dic en 2
-                new LOG320_LAB01_Tony(words, dics, 0, words.length, 0, maxDic / 2).compute();
-                new LOG320_LAB01_Tony(words, dics, 0, words.length, maxDic / 2 + 1, maxDic).compute();
             }
-
         } else {
-            // diviser le tableau words en 2
-            new LOG320_LAB01_Tony(words, dics, 0, maxWord / 2, 0, dics.length).compute();
-            new LOG320_LAB01_Tony(words, dics, maxWord / 2 + 1, maxWord, 0, dics.length).compute();
+            int mid = (debutDic + finDic) >>> 1;
+            invokeAll(new LOG320_LAB01_Tony(debutDic, mid),
+                    new LOG320_LAB01_Tony(mid, finDic));
         }
     }
 
