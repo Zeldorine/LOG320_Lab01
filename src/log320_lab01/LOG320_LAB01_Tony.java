@@ -1,8 +1,3 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package log320_lab01;
 
 import java.io.IOException;
@@ -11,30 +6,18 @@ import java.nio.file.Paths;
 import java.util.concurrent.ForkJoinPool;
 import static java.util.concurrent.ForkJoinTask.invokeAll;
 import java.util.concurrent.RecursiveAction;
-import java.util.concurrent.Semaphore;
 
 /**
  *
  * @author Zeldorine
  */
-public class LOG320_LAB01_Tony extends RecursiveAction {
+public class LOG320_LAB01_Tony {
 
-    private final int debutDic;
-    private final int finDic;
     private static int[] resultat;
     private static char[][] wordstab;
     private static char[][] dicstab;
-    private final static Semaphore semaphore = new Semaphore(0);
-
-    /**
-     * @param debutDic
-     * @param finDic
-     */
-    public LOG320_LAB01_Tony(int debutDic, int finDic) {
-        super();
-        this.debutDic = debutDic;
-        this.finDic = finDic;
-    }
+    private static String[] tmpWords;
+    private static boolean useThread = false;
 
     /**
      * @param args the command line arguments
@@ -46,39 +29,42 @@ public class LOG320_LAB01_Tony extends RecursiveAction {
             System.exit(0);
         }
 
-        wordstab = initTab(removeSpace(Files.readAllLines(Paths.get(args[0])).toArray(new String[0])));// Faut-il les supprimer ?
+        tmpWords = Files.readAllLines(Paths.get(args[0])).toArray(new String[0]);
+        wordstab = initTab(removeSpace(Files.readAllLines(Paths.get(args[0])).toArray(new String[0])));
         dicstab = initTab(removeSpace(Files.readAllLines(Paths.get(args[1])).toArray(new String[0])));
         resultat = new int[wordstab.length];
 
         preprog();
 
-        RecursiveAction mainTask = new LOG320_LAB01_Tony(0, dicstab.length);
-        ForkJoinPool mainPool = new ForkJoinPool();
-
         Runtime runtime = Runtime.getRuntime();
         runtime.freeMemory();
 
-        Timer.start();
-        prog();
-        Timer.stop();
-        affichierResultat();
-        System.out.format("Temps execution sans thread avec un fichier de " + dicstab.length + ": %.20f secondes \n", Timer.getTime());
-        resultat = new int[wordstab.length];
-        Timer.start();
-        mainPool.invoke(mainTask);
-        Timer.stop();
-        System.out.format("Temps execution avec thread avec un fichier de " + dicstab.length + ": %.20f secondes \n", Timer.getTime());
-
-        /* if (dics.length < 200000) {
+        if (!needThread()) {
             Timer.start();
             prog();
             Timer.stop();
         } else {
+            useThread = true;
+            ForkJoinPool mainPool = new ForkJoinPool();
+            RecursiveAction mainTask = new LOG320_LAB01_Tony_Algo_AT(0, wordstab.length);
             Timer.start();
             mainPool.invoke(mainTask);
             Timer.stop();
-        }*/
+        }
+
         affichierResultat();
+    }
+
+    private static boolean needThread() {
+        return (wordstab.length >= 20 && dicstab.length >= 8000)
+                || (wordstab.length >= 30 && dicstab.length >= 5000)
+                || (wordstab.length >= 40 && dicstab.length >= 4000)
+                || (wordstab.length >= 50 && dicstab.length >= 3000)
+                || (wordstab.length >= 60 && dicstab.length >= 3000)
+                || (wordstab.length >= 70 && dicstab.length >= 2000)
+                || (wordstab.length >= 80 && dicstab.length >= 2000)
+                || (wordstab.length >= 90 && dicstab.length >= 2000)
+                || (wordstab.length >= 100 && dicstab.length >= 1000);
     }
 
     private static char[][] initTab(String[] tab) {
@@ -136,16 +122,16 @@ public class LOG320_LAB01_Tony extends RecursiveAction {
             StringBuilder sb = new StringBuilder("Il y a ");
             sb.append(resultat[i]);
             sb.append(" anagrammes pour le mot ");
-            sb.append(wordstab[i]);
+            sb.append(tmpWords[i]);
             System.out.println(sb.toString());
             nbTotal += resultat[i];
         }
 
-        StringBuilder sb = new StringBuilder("Il y a un total de ");
+        StringBuilder sb = new StringBuilder("(use thread = " + useThread + ") Il y a un total de ");
         sb.append(nbTotal);
         System.out.println(sb.toString());
 
-        // System.out.format("Temps execution : %.20f secondes", Timer.getTime());
+        System.out.format("Temps d'execution : %.20f secondes", Timer.getTime());
     }
 
     private static boolean EstUnAnagrammeV1(char[] chaine1, char[] chaine2) {
@@ -214,26 +200,6 @@ public class LOG320_LAB01_Tony extends RecursiveAction {
         return true;
     }
 
-    @Override
-    protected void compute() {// inverser synchronized
-        if (finDic - debutDic < 750) {
-            int wordsLength = wordstab.length;
-            for (int i = 0; i < wordsLength; i++) {
-                for (int j = debutDic; j < finDic; j++) {
-                    if (EstUnAnagrammeV2(wordstab[i], dicstab[j])) {
-                        synchronized (semaphore) {
-                            resultat[i]++;
-                        }
-                    }
-                }
-            }
-        } else {
-            int mid = (debutDic + finDic) >>> 1;
-            invokeAll(new LOG320_LAB01_Tony(debutDic, mid),
-                    new LOG320_LAB01_Tony(mid, finDic));
-        }
-    }
-
     public static class Timer {
 
         private static long startTime, endTime;
@@ -249,6 +215,40 @@ public class LOG320_LAB01_Tony extends RecursiveAction {
 
         public static float getTime() {
             return ((float) (endTime - startTime)) / 1000000000.0f;
+        }
+    }
+
+    /**
+     * Divise seulement le tableau de word
+     */
+    public static class LOG320_LAB01_Tony_Algo_AT
+            extends RecursiveAction {
+
+        private final int debutWord;
+        private final int finWord;
+
+        public LOG320_LAB01_Tony_Algo_AT(int debutWord, int finWord) {
+            super();
+            this.debutWord = debutWord;
+            this.finWord = finWord;
+        }
+
+        @Override
+        protected void compute() {
+            if (finWord - debutWord < 10) {
+                int dicsLength = dicstab.length;
+                for (int i = debutWord; i < finWord; i++) {
+                    for (int j = 0; j < dicsLength; j++) {
+                        if (EstUnAnagrammeV2(wordstab[i], dicstab[j])) {
+                            resultat[i]++;
+                        }
+                    }
+                }
+            } else {
+                int mid = (debutWord + finWord) >>> 1;
+                invokeAll(new LOG320_LAB01_Tony_Algo_AT(debutWord, mid),
+                        new LOG320_LAB01_Tony_Algo_AT(mid, finWord));
+            }
         }
     }
 }
