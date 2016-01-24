@@ -8,10 +8,10 @@ package log320_lab01;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.HashMap;
 import java.util.concurrent.ForkJoinPool;
 import static java.util.concurrent.ForkJoinTask.invokeAll;
 import java.util.concurrent.RecursiveAction;
+import java.util.concurrent.Semaphore;
 
 /**
  *
@@ -19,19 +19,14 @@ import java.util.concurrent.RecursiveAction;
  */
 public class LOG320_LAB01_Tony extends RecursiveAction {
 
-    private static String[] words;
-    private static String[] dics;
-    private int debutDic;
-    private int finDic;
+    private final int debutDic;
+    private final int finDic;
     private static int[] resultat;
-    private static HashMap<String, Integer> map;
+    private static char[][] wordstab;
+    private static char[][] dicstab;
+    private final static Semaphore semaphore = new Semaphore(0);
 
     /**
-     *
-     * @param words
-     * @param dics
-     * @param debutWord
-     * @param finWord
      * @param debutDic
      * @param finDic
      */
@@ -39,8 +34,6 @@ public class LOG320_LAB01_Tony extends RecursiveAction {
         super();
         this.debutDic = debutDic;
         this.finDic = finDic;
-
-        // this.compute();
     }
 
     /**
@@ -53,21 +46,30 @@ public class LOG320_LAB01_Tony extends RecursiveAction {
             System.exit(0);
         }
 
-        words = removeSpace(Files.readAllLines(Paths.get(args[0])).toArray(new String[0]));
-        dics = removeSpace(Files.readAllLines(Paths.get(args[1])).toArray(new String[0]));
-
-        map = new HashMap(words.length + 1);
-        resultat = new int[words.length];
+        wordstab = initTab(removeSpace(Files.readAllLines(Paths.get(args[0])).toArray(new String[0])));// Faut-il les supprimer ?
+        dicstab = initTab(removeSpace(Files.readAllLines(Paths.get(args[1])).toArray(new String[0])));
+        resultat = new int[wordstab.length];
 
         preprog();
 
-        RecursiveAction mainTask = new LOG320_LAB01_Tony(0, dics.length);
-        ForkJoinPool mainPool = new ForkJoinPool(64);
+        RecursiveAction mainTask = new LOG320_LAB01_Tony(0, dicstab.length);
+        ForkJoinPool mainPool = new ForkJoinPool();
 
         Runtime runtime = Runtime.getRuntime();
         runtime.freeMemory();
 
-        if (dics.length < 40) {
+        Timer.start();
+        prog();
+        Timer.stop();
+        affichierResultat();
+        System.out.format("Temps execution sans thread avec un fichier de " + dicstab.length + ": %.20f secondes \n", Timer.getTime());
+        resultat = new int[wordstab.length];
+        Timer.start();
+        mainPool.invoke(mainTask);
+        Timer.stop();
+        System.out.format("Temps execution avec thread avec un fichier de " + dicstab.length + ": %.20f secondes \n", Timer.getTime());
+
+        /* if (dics.length < 200000) {
             Timer.start();
             prog();
             Timer.stop();
@@ -75,8 +77,18 @@ public class LOG320_LAB01_Tony extends RecursiveAction {
             Timer.start();
             mainPool.invoke(mainTask);
             Timer.stop();
-        }
+        }*/
         affichierResultat();
+    }
+
+    private static char[][] initTab(String[] tab) {
+        char[][] tmp = new char[tab.length][];
+
+        for (int i = 0; i < tab.length; i++) {
+            tmp[i] = tab[i].toCharArray();
+        }
+
+        return tmp;
     }
 
     private static String[] removeSpace(String[] list) {
@@ -95,28 +107,25 @@ public class LOG320_LAB01_Tony extends RecursiveAction {
      * @throws InterruptedException
      */
     private static void preprog() throws IOException {
-        for (String ligne : words) {
-            for (String ligne2 : dics) {
-                if (EstUnAnagrammeV2(ligne.toCharArray(), ligne2.toCharArray())) {
+        for (char[] ligne : wordstab) {
+            for (char[] ligne2 : dicstab) {
+                if (EstUnAnagrammeV2(ligne, ligne2)) {
                 }
             }
         }
     }
 
     private static void prog() throws IOException {
-        int maxWords = words.length;
-        int maxDic = dics.length;
+        int maxWords = wordstab.length;
+        int maxDic = dicstab.length;
 
-        for (int i = 0; i < maxWords; i++) {// USE thread
-            // int nbAna = 0;
+        for (int i = 0; i < maxWords; i++) {
             for (int j = 0; j < maxDic; j++) {
-                if (EstUnAnagrammeV2(words[i].toCharArray(), dics[j].toCharArray())) {
-                    resultat[i] += 1;
-                    // nbAna++;
+                if (EstUnAnagrammeV2(wordstab[i], dicstab[j])) {
+                    resultat[i]++;
                 }
 
             }
-            //  map.put(words[i], nbAna);
         }
     }
 
@@ -127,7 +136,7 @@ public class LOG320_LAB01_Tony extends RecursiveAction {
             StringBuilder sb = new StringBuilder("Il y a ");
             sb.append(resultat[i]);
             sb.append(" anagrammes pour le mot ");
-            sb.append(words[i]);
+            sb.append(wordstab[i]);
             System.out.println(sb.toString());
             nbTotal += resultat[i];
         }
@@ -136,16 +145,20 @@ public class LOG320_LAB01_Tony extends RecursiveAction {
         sb.append(nbTotal);
         System.out.println(sb.toString());
 
-        System.out.format("Temps execution : %.20f secondes", Timer.getTime());
+        // System.out.format("Temps execution : %.20f secondes", Timer.getTime());
     }
 
     private static boolean EstUnAnagrammeV1(char[] chaine1, char[] chaine2) {
+        char[] tmp = new char[chaine2.length];
+        System.arraycopy(chaine2, 0, tmp, 0,
+                chaine2.length);
+
         for (char c1 : chaine1) {
             boolean trouver = false;
             for (int i = 0; i < chaine2.length; i++) {
-                if (chaine2[i] != '\0' && c1 == chaine2[i]) {
+                if (tmp[i] != '\0' && c1 == tmp[i]) {
                     trouver = true;
-                    chaine2[i] = '\0';
+                    tmp[i] = '\0';
                     break;
                 }
             }
@@ -155,29 +168,41 @@ public class LOG320_LAB01_Tony extends RecursiveAction {
             }
         }
 
-        if (!chaineIsEmpty(chaine2)) {
-            return false;
-        }
-
-        return true;
+        return chaineIsEmpty(tmp);
     }
 
     private static boolean EstUnAnagrammeV2(char[] ch1, char[] ch2) {
         if (ch1.length != ch2.length) {
             return false;
         }
-        return hash(ch1) == hash(ch2);
-    }
 
-    private static int hash(char[] tab) {
-        int hash = 0;
-        int maxElement = tab.length;
+        int nbCh1 = ch1.length;
+        int[] counts = new int[36];
 
-        for (int i = 0; i < maxElement; i++) {
-            hash += (int) tab[i];
+        for (int i = 0; i < nbCh1; i++) {
+            int c1 = (int) ch1[i];
+            int c2 = (int) ch2[i];
+
+            if (c1 < 97) {
+                counts[(int) ch1[i] - 26]++;
+            } else {
+                counts[(int) ch1[i] - 97]++;
+            }
+
+            if (c2 < 97) {
+                counts[(int) ch2[i] - 26]--;
+            } else {
+                counts[(int) ch2[i] - 97]--;
+            }
         }
 
-        return hash;
+        for (int i = 0; i < 36; i++) {
+            if (counts[i] != 0) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private static boolean chaineIsEmpty(char[] chaine) {
@@ -190,12 +215,15 @@ public class LOG320_LAB01_Tony extends RecursiveAction {
     }
 
     @Override
-    protected void compute() {
-        if (finDic - debutDic < 40) {
-            for (int i = 0; i < words.length; i++) {
+    protected void compute() {// inverser synchronized
+        if (finDic - debutDic < 750) {
+            int wordsLength = wordstab.length;
+            for (int i = 0; i < wordsLength; i++) {
                 for (int j = debutDic; j < finDic; j++) {
-                    if (EstUnAnagrammeV2(words[i].toCharArray(), dics[j].toCharArray())) {
-                        resultat[i] += 1;
+                    if (EstUnAnagrammeV2(wordstab[i], dicstab[j])) {
+                        synchronized (semaphore) {
+                            resultat[i]++;
+                        }
                     }
                 }
             }
