@@ -17,7 +17,6 @@ public class LOG320_LAB01_Tony {
     private static char[][] wordstab;
     private static char[][] dicstab;
     private static String[] tmpWords;
-    private static boolean useThread = false;
 
     /**
      * @param args the command line arguments
@@ -30,7 +29,7 @@ public class LOG320_LAB01_Tony {
         }
 
         tmpWords = Files.readAllLines(Paths.get(args[0])).toArray(new String[0]);
-        wordstab = initTab(removeSpace(Files.readAllLines(Paths.get(args[0])).toArray(new String[0])));
+        wordstab = initTab(removeSpace(tmpWords));
         dicstab = initTab(removeSpace(Files.readAllLines(Paths.get(args[1])).toArray(new String[0])));
         resultat = new int[wordstab.length];
 
@@ -44,7 +43,6 @@ public class LOG320_LAB01_Tony {
             prog();
             Timer.stop();
         } else {
-            useThread = true;
             ForkJoinPool mainPool = new ForkJoinPool();
             RecursiveAction mainTask = new LOG320_LAB01_Tony_Algo_AT(0, wordstab.length);
             Timer.start();
@@ -101,6 +99,24 @@ public class LOG320_LAB01_Tony {
         }
     }
 
+    private static void preprogLimit() throws IOException {
+        int maxW = wordstab.length;
+        int maxD = dicstab.length;
+        if (maxW > 40) {
+            maxW = 40;
+        }
+
+        if (maxD > 30000) {
+            maxD = 30000;
+        }
+        for (int i = 0; i < maxW; i++) {
+            for (int j = 0; j < maxD; j++) {
+                EstUnAnagrammeV2(wordstab[i], dicstab[j]);
+
+            }
+        }
+    }
+
     private static void prog() throws IOException {
         int maxWords = wordstab.length;
         int maxDic = dicstab.length;
@@ -127,11 +143,11 @@ public class LOG320_LAB01_Tony {
             nbTotal += resultat[i];
         }
 
-        StringBuilder sb = new StringBuilder("(use thread = " + useThread + ") Il y a un total de ");
+        StringBuilder sb = new StringBuilder("Il y a un total de ");
         sb.append(nbTotal);
         System.out.println(sb.toString());
 
-        System.out.format("Temps d'execution : %.20f secondes", Timer.getTime());
+        System.out.format("Temps d'execution : %.18f secondes \n", Timer.getTime());
     }
 
     private static boolean EstUnAnagrammeV1(char[] chaine1, char[] chaine2) {
