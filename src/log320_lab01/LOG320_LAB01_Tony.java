@@ -78,7 +78,7 @@ public class LOG320_LAB01_Tony {
     private static String[] removeSpace(String[] list) {
         String[] newList = new String[list.length];
         for (int i = 0; i < list.length; i++) {
-            newList[i] = list[i].replace(" ", "");
+            newList[i] = list[i].replaceAll("\\W","");
         }
 
         return newList;
@@ -95,24 +95,6 @@ public class LOG320_LAB01_Tony {
             for (char[] ligne2 : dicstab) {
                 if (EstUnAnagrammeV2(ligne, ligne2)) {
                 }
-            }
-        }
-    }
-
-    private static void preprogLimit() throws IOException {
-        int maxW = wordstab.length;
-        int maxD = dicstab.length;
-        if (maxW > 40) {
-            maxW = 40;
-        }
-
-        if (maxD > 30000) {
-            maxD = 30000;
-        }
-        for (int i = 0; i < maxW; i++) {
-            for (int j = 0; j < maxD; j++) {
-                EstUnAnagrammeV2(wordstab[i], dicstab[j]);
-
             }
         }
     }
